@@ -34,7 +34,7 @@ fn setup(
         ..default()
     });
 
-    let shape = meshes.add (MyBox::default().into());
+let shape = meshes.add (MyBox::default().into());
     commands.spawn((
         PbrBundle {
             mesh: shape,
@@ -74,9 +74,18 @@ fn setup(
     });
 }
 
-fn rotate(mut query: Query<&mut Transform, With<Shape>>, time: Res<Time>) {
+fn rotate(
+    mut query: Query<&mut Transform, With<Shape>>,
+    time: Res<Time>,
+    keycode: Res<Input<KeyCode>>) {
+    let speed = 0.02;
     for mut transform in &mut query {
-        transform.rotate(Quat::from_rotation_x(0.01));
+        if keycode.pressed(KeyCode::Right) {
+            transform.rotate(Quat::from_rotation_x(-speed));
+        }
+        if keycode.pressed(KeyCode::Left) {
+            transform.rotate(Quat::from_rotation_x( speed));
+        }
     }
 }
 
@@ -131,7 +140,7 @@ pub struct MyBox {
 }
 impl Default for MyBox {
     fn default() -> Self {
-        MyBox::new(1.0, 1.0, 1.0, 0.1)
+        MyBox::new(3.0, 3.0, 3.0, 0.5)
     }
 }
 impl MyBox {
@@ -154,35 +163,35 @@ impl From<MyBox> for Mesh {
         // suppose Y-up right hand, and camera look from +z to -z
         let vertices = &[
             // Front
-            ([sp.min_x, sp.min_y, sp.max_z], [0., 0., 1.0], [0., 0.]),
-            ([sp.max_x, sp.min_y, sp.max_z], [0., 0., 1.0], [1.0, 0.]),
-            ([sp.max_x, sp.max_y, sp.max_z], [0., 0., 1.0], [1.0, 1.0]),
-            ([sp.min_x, sp.max_y, sp.max_z], [0., 0., 1.0], [0., 1.0]),
+            ([sp.min_x + _r, sp.min_y + _r, sp.max_z], [0., 0., 1.0], [0., 0.]), // 0
+            ([sp.max_x - _r, sp.min_y + _r, sp.max_z], [0., 0., 1.0], [1.0, 0.]),// 1
+            ([sp.max_x - _r, sp.max_y - _r, sp.max_z], [0., 0., 1.0], [1.0, 1.0]),// 2
+            ([sp.min_x + _r, sp.max_y - _r, sp.max_z], [0., 0., 1.0], [0., 1.0]),// 3
             // Back
-            ([sp.min_x, sp.max_y, sp.min_z], [0., 0., -1.0], [1.0, 0.]),
-            ([sp.max_x, sp.max_y, sp.min_z], [0., 0., -1.0], [0., 0.]),
-            ([sp.max_x, sp.min_y, sp.min_z], [0., 0., -1.0], [0., 1.0]),
-            ([sp.min_x, sp.min_y, sp.min_z], [0., 0., -1.0], [1.0, 1.0]),
+            ([sp.min_x + _r, sp.max_y - _r, sp.min_z], [0., 0., -1.0], [1.0, 0.]),// 4
+            ([sp.max_x - _r, sp.max_y - _r, sp.min_z], [0., 0., -1.0], [0., 0.]),// 5
+            ([sp.max_x - _r, sp.min_y + _r, sp.min_z], [0., 0., -1.0], [0., 1.0]),// 6
+            ([sp.min_x + _r, sp.min_y + _r, sp.min_z], [0., 0., -1.0], [1.0, 1.0]),// 7
             // Right
-            ([sp.max_x, sp.min_y, sp.min_z], [1.0, 0., 0.], [0., 0.]),
-            ([sp.max_x, sp.max_y, sp.min_z], [1.0, 0., 0.], [1.0, 0.]),
-            ([sp.max_x, sp.max_y, sp.max_z], [1.0, 0., 0.], [1.0, 1.0]),
-            ([sp.max_x, sp.min_y, sp.max_z], [1.0, 0., 0.], [0., 1.0]),
+            ([sp.max_x, sp.min_y + _r, sp.min_z + _r], [1.0, 0., 0.], [0., 0.]),// 8
+            ([sp.max_x, sp.max_y - _r, sp.min_z + _r], [1.0, 0., 0.], [1.0, 0.]),// 9
+            ([sp.max_x, sp.max_y - _r, sp.max_z - _r], [1.0, 0., 0.], [1.0, 1.0]),// 10
+            ([sp.max_x, sp.min_y + _r, sp.max_z - _r], [1.0, 0., 0.], [0., 1.0]),// 11
             // Left
-            ([sp.min_x, sp.min_y, sp.max_z], [-1.0, 0., 0.], [1.0, 0.]),
-            ([sp.min_x, sp.max_y, sp.max_z], [-1.0, 0., 0.], [0., 0.]),
-            ([sp.min_x, sp.max_y, sp.min_z], [-1.0, 0., 0.], [0., 1.0]),
-            ([sp.min_x, sp.min_y, sp.min_z], [-1.0, 0., 0.], [1.0, 1.0]),
+            ([sp.min_x, sp.min_y + _r, sp.max_z - _r], [-1.0, 0., 0.], [1.0, 0.]),// 12
+            ([sp.min_x, sp.max_y - _r, sp.max_z - _r], [-1.0, 0., 0.], [0., 0.]),// 13
+            ([sp.min_x, sp.max_y - _r, sp.min_z + _r], [-1.0, 0., 0.], [0., 1.0]),// 14
+            ([sp.min_x, sp.min_y + _r, sp.min_z + _r], [-1.0, 0., 0.], [1.0, 1.0]),// 15
             // Top
-            ([sp.max_x, sp.max_y, sp.min_z], [0., 1.0, 0.], [1.0, 0.]),
-            ([sp.min_x, sp.max_y, sp.min_z], [0., 1.0, 0.], [0., 0.]),
-            ([sp.min_x, sp.max_y, sp.max_z], [0., 1.0, 0.], [0., 1.0]),
-            ([sp.max_x, sp.max_y, sp.max_z], [0., 1.0, 0.], [1.0, 1.0]),
+            ([sp.max_x - _r, sp.max_y, sp.min_z + _r], [0., 1.0, 0.], [1.0, 0.]),// 16
+            ([sp.min_x + _r, sp.max_y, sp.min_z + _r], [0., 1.0, 0.], [0., 0.]),// 17
+            ([sp.min_x + _r, sp.max_y, sp.max_z - _r], [0., 1.0, 0.], [0., 1.0]),// 18
+            ([sp.max_x - _r, sp.max_y, sp.max_z - _r], [0., 1.0, 0.], [1.0, 1.0]),// 19
             // Bottom
-            ([sp.max_x, sp.min_y, sp.max_z], [0., -1.0, 0.], [0., 0.]),
-            ([sp.min_x, sp.min_y, sp.max_z], [0., -1.0, 0.], [1.0, 0.]),
-            ([sp.min_x, sp.min_y, sp.min_z], [0., -1.0, 0.], [1.0, 1.0]),
-            ([sp.max_x, sp.min_y, sp.min_z], [0., -1.0, 0.], [0., 1.0]),
+            ([sp.max_x - _r, sp.min_y, sp.max_z - _r], [0., -1.0, 0.], [0., 0.]),// 20
+            ([sp.min_x + _r, sp.min_y, sp.max_z - _r], [0., -1.0, 0.], [1.0, 0.]),// 21
+            ([sp.min_x + _r, sp.min_y, sp.min_z + _r], [0., -1.0, 0.], [1.0, 1.0]),// 22
+            ([sp.max_x - _r, sp.min_y, sp.min_z + _r], [0., -1.0, 0.], [0., 1.0]),// 23
         ];
 
         let positions: Vec<_> = vertices.iter().map(|(p, _, _)| *p).collect();
@@ -196,6 +205,11 @@ impl From<MyBox> for Mesh {
             12, 13, 14, 14, 15, 12, // left
             16, 17, 18, 18, 19, 16, // top
             20, 21, 22, 22, 23, 20, // bottom
+
+            0, 3, 13, 13, 12, 0,// Border front/left
+            18, 17, 13, 14, 13, 17,// Top/Left
+            4, 7, 14, 14, 7, 15,// Back/Left
+            22, 21, 15, 12, 15, 21//Bottom/Left
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
