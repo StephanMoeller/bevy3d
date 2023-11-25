@@ -33,8 +33,8 @@ fn setup(
         base_color_texture: Some(images.add(uv_debug_texture())),
         ..default()
     });
-    let shape = meshes.add (MyBox::default().into());
 
+    let shape = meshes.add (MyBox::default().into());
     commands.spawn((
         PbrBundle {
             mesh: shape,
@@ -190,7 +190,12 @@ impl From<MyBox> for Mesh {
         let uvs: Vec<_> = vertices.iter().map(|(_, _, uv)| *uv).collect();
 
         let indices = Indices::U32(vec![
-            0, 1, 2,// front
+            0, 1, 2, 2, 3, 0, // front
+            4, 5, 6, 6, 7, 4, // back
+            8, 9, 10, 10, 11, 8, // right
+            12, 13, 14, 14, 15, 12, // left
+            16, 17, 18, 18, 19, 16, // top
+            20, 21, 22, 22, 23, 20, // bottom
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
