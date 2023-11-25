@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::*;
 use bevy::{
     prelude::*,
-    render::render_resource::*
+    render::render_resource::*,
 };
 use bevy::render::mesh::Indices;
 
@@ -21,8 +21,6 @@ fn main() {
 #[derive(Component)]
 struct Shape;
 
-const X_EXTENT: f32 = 14.5;
-
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -34,21 +32,20 @@ fn setup(
         ..default()
     });
 
-let shape = meshes.add (MyBox::default().into());
-    commands.spawn((
-        PbrBundle {
-            mesh: shape,
-            material: debug_material.clone(),
-            transform: Transform::from_xyz(
-               1.9,
-                2.0,
-                0.0,
-            ),
-//                .with_rotation(Quat::from_rotation_x(-PI / 4.)),
-            ..default()
-        },
-        Shape,
-    ));
+    let radiuses:Vec<f32> = vec![0.05, 0.045, 0.04, 0.035, 0.03, 0.0];
+    for (idx, radius) in radiuses.iter().enumerate() {
+        let shape = MyBox::new(1.0, 1.0, 1.0, *radius);
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(shape.into()),
+                material: materials.add(Color::rgb_u8(124, 144, 255).into()),
+                transform: Transform::from_xyz((idx as f32 - 2.0) * 2.0, 2.0, 0.0),
+                ..default()
+            },
+            Shape,
+        ));
+    }
+
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -95,14 +92,7 @@ fn rotate(
     }
 }
 
-fn get_val(elapsed_millis: u128, max: u128) -> f32
-{
-    let mut amount = elapsed_millis % max;
-    if amount > max / 2 {
-        amount = max - amount;
-    }
-    return amount as f32 / max as f32;
-}
+
 
 
 /// Creates a colorful test pattern
@@ -132,6 +122,7 @@ fn uv_debug_texture() -> Image {
         TextureFormat::Rgba8UnormSrgb,
     )
 }
+
 #[derive(Debug, Copy, Clone)]
 pub struct MyBox {
     pub min_x: f32,
@@ -142,13 +133,15 @@ pub struct MyBox {
 
     pub min_z: f32,
     pub max_z: f32,
-    pub edge_radius: f32
+    pub edge_radius: f32,
 }
+
 impl Default for MyBox {
     fn default() -> Self {
         MyBox::new(3.0, 3.0, 3.0, 0.5)
     }
 }
+
 impl MyBox {
     /// Creates a new box centered at the origin with the supplied side lengths.
     pub fn new(x_length: f32, y_length: f32, z_length: f32, edge_radius: f32) -> MyBox {
@@ -159,10 +152,11 @@ impl MyBox {
             min_y: -y_length / 2.0,
             max_z: z_length / 2.0,
             min_z: -z_length / 2.0,
-            edge_radius: edge_radius
+            edge_radius: edge_radius,
         }
     }
 }
+
 impl From<MyBox> for Mesh {
     fn from(sp: MyBox) -> Self {
         let _r = sp.edge_radius;
@@ -237,7 +231,7 @@ impl From<MyBox> for Mesh {
             21, 0, 12, // bottom/left/front
             22, 15, 7, // bottom/left/back
             20, 11, 1, // bottom/right/front
-            23, 6, 8   // bottom/right/back
+            23, 6, 8,   // bottom/right/back
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
