@@ -81,10 +81,16 @@ fn rotate(
     let speed = 0.02;
     for mut transform in &mut query {
         if keycode.pressed(KeyCode::Right) {
-            transform.rotate(Quat::from_rotation_x(-speed));
+            transform.rotate(Quat::from_rotation_y(speed));
         }
         if keycode.pressed(KeyCode::Left) {
-            transform.rotate(Quat::from_rotation_x( speed));
+            transform.rotate(Quat::from_rotation_y(-speed));
+        }
+        if keycode.pressed(KeyCode::Up) {
+            transform.rotate(Quat::from_rotation_x(-speed));
+        }
+        if keycode.pressed(KeyCode::Down) {
+            transform.rotate(Quat::from_rotation_x(speed));
         }
     }
 }
@@ -206,10 +212,16 @@ impl From<MyBox> for Mesh {
             16, 17, 18, 18, 19, 16, // top
             20, 21, 22, 22, 23, 20, // bottom
 
-            0, 3, 13, 13, 12, 0,// Border front/left
-            18, 17, 13, 14, 13, 17,// Top/Left
-            4, 7, 14, 14, 7, 15,// Back/Left
-            22, 21, 15, 12, 15, 21//Bottom/Left
+            // borders
+            0, 3, 13, 13, 12, 0,    // front/left
+            18, 17, 13, 14, 13, 17, // top/left
+            4, 7, 14, 14, 7, 15,    // back/left
+            22, 21, 15, 12, 15, 21, // bottom/left
+
+            2, 1, 10, 1, 11, 10,    // front/right
+            16, 19, 10, 10, 9, 16,  // top/right
+            6, 5, 9, 9, 8, 6,       // back/right
+            20, 23, 8, 8, 11, 20    // bottom/right
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
