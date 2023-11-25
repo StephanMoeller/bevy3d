@@ -221,7 +221,12 @@ impl From<MyBox> for Mesh {
             2, 1, 10, 1, 11, 10,    // front/right
             16, 19, 10, 10, 9, 16,  // top/right
             6, 5, 9, 9, 8, 6,       // back/right
-            20, 23, 8, 8, 11, 20    // bottom/right
+            20, 23, 8, 8, 11, 20,   // bottom/right
+
+            19, 18, 2, 3, 2, 18,    // top/front
+            1, 0, 20, 21, 20, 0,    // front/bottom
+            23, 22, 7, 7, 6, 23,    // bottom/back
+            5, 4, 17, 17, 16, 5,    // back/top
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
