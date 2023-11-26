@@ -32,18 +32,23 @@ fn setup(
         ..default()
     });
 
-    let radiuses:Vec<f32> = vec![0.05, 0.045, 0.04, 0.035, 0.03, 0.0];
+    let radiuses:Vec<f32> = vec![0.15,0.13,0.1, 0.065, 0.05, 0.03, 0.0];
     for (idx, radius) in radiuses.iter().enumerate() {
-        let shape = MyBox::new(1.0, 1.0, 1.0, *radius);
+        let shape = MyBox::new(1.0, 2.0, 1.0, *radius);
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
-                material: materials.add(Color::rgb_u8(124, 144, 255).into()),
-                transform: Transform::from_xyz((idx as f32 - 2.0) * 2.0, 2.0, 0.0),
+                material: materials.add(StandardMaterial {
+                    base_color: Color::rgb(0.8, 1.0, 0.8),
+                    metallic:0.5,
+                    ..default()
+                }),
+                transform: Transform::from_xyz((idx as f32 - (radiuses.len() as f32 / 2.)) * 2.0, 2.0, 0.0),
                 ..default()
             },
             Shape,
         ));
+
     }
 
 
@@ -66,7 +71,7 @@ fn setup(
     });
 
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 6., 12.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(0.0, 3., 15.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 }
