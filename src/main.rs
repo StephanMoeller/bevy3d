@@ -1,14 +1,11 @@
 //! This example demonstrates the built-in 3d shapes in Bevy.
 //! The scene includes a patterned texture and a rotation for visualizing the normals and UVs.
 
-use std::f32::consts::PI;
 use bevy::*;
 use bevy::{
     prelude::*,
     render::render_resource::*,
 };
-use bevy::math::cubic_splines::Point;
-use bevy::pbr::OpaqueRendererMethod;
 use bevy::render::mesh::Indices;
 use bevy::utils::HashMap;
 
@@ -20,6 +17,7 @@ fn main() {
         .run();
 }
 
+#[derive(Eq, Hash, PartialEq)]
 struct PointI32 {
     x: i32,
     y: i32,
@@ -31,6 +29,10 @@ impl PointI32 {
     pub fn new(x: i32, y: i32, z: i32) -> PointI32 {
         PointI32 { x, y, z }
     }
+    pub fn get_neighbour(&self, x_rel: i32, y_rel: i32, z_rel: i32) -> PointI32
+    {
+        return PointI32::new(self.x + x_rel, self.y + y_rel, self.z + z_rel);
+    }
 }
 
 /// A marker component for our shapes so we can query them separately from the ground plane
@@ -40,21 +42,22 @@ struct Shape;
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let debug_material = materials.add(StandardMaterial {
-        base_color_texture: Some(images.add(uv_debug_texture())),
-        ..default()
-    });
+    let points: Vec<PointI32> = vec![PointI32::new(0, 1, 0),
+                                     PointI32::new(1, 1, 0),
+                                     PointI32::new(1, 2, 0),
+                                     PointI32::new(0, 1, 1)];
 
-    let points: Vec<PointI32> = vec![PointI32::new(0, 1, 0), PointI32::new(1, 1, 0), PointI32::new(1, 2, 0), PointI32::new(0, 1, 1)];
-    let points_hash: HashMap<(i32, i32, i32), bool> = HashMap::new();
+    let points_hash: HashMap<PointI32, bool> = HashMap::new();
     let box_unit = 1.0;
     for point in points.iter()
     {
         let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.05);
-        if points_hash.contains_key(&(point.x, point.y, point.z)) {}
+        if points_hash.contains_key(&point.get_neighbour(0,0,1))
+        {
+
+        }
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
@@ -71,12 +74,7 @@ fn setup(
     }
 
     commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 9000.0,
-            range: 100.,
-            shadows_enabled: true,
-            ..default()
-        },
+        point_light: PointLight { intensity: 9000.0, range: 100., shadows_enabled: true, ..default() },
         transform: Transform::from_xyz(8.0, 16.0, 8.0),
         ..default()
     });
@@ -114,35 +112,6 @@ fn rotate(
             transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_x(-speed));
         }
     }
-}
-
-
-/// Creates a colorful test pattern
-fn uv_debug_texture() -> Image {
-    const TEXTURE_SIZE: usize = 8;
-
-    let mut palette: [u8; 32] = [
-        255, 102, 159, 255, 255, 159, 102, 255, 236, 255, 102, 255, 121, 255, 102, 255, 102, 255,
-        198, 255, 102, 198, 255, 255, 121, 102, 255, 255, 236, 102, 255, 255,
-    ];
-
-    let mut texture_data = [0; TEXTURE_SIZE * TEXTURE_SIZE * 4];
-    for y in 0..TEXTURE_SIZE {
-        let offset = TEXTURE_SIZE * y * 4;
-        texture_data[offset..(offset + TEXTURE_SIZE * 4)].copy_from_slice(&palette);
-        palette.rotate_right(4);
-    }
-
-    Image::new_fill(
-        Extent3d {
-            width: TEXTURE_SIZE as u32,
-            height: TEXTURE_SIZE as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        &texture_data,
-        TextureFormat::Rgba8UnormSrgb,
-    )
 }
 
 #[derive(Debug, Copy, Clone)]
