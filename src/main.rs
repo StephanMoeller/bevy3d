@@ -7,7 +7,10 @@ use bevy::{
     prelude::*,
     render::render_resource::*,
 };
+use bevy::math::cubic_splines::Point;
+use bevy::pbr::OpaqueRendererMethod;
 use bevy::render::mesh::Indices;
+use bevy::utils::HashMap;
 
 fn main() {
     App::new()
@@ -15,6 +18,19 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, rotate)
         .run();
+}
+
+struct PointI32 {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+impl PointI32 {
+    /// Creates a new box centered at the origin with the supplied side lengths.
+    pub fn new(x: i32, y: i32, z: i32) -> PointI32 {
+        PointI32 { x, y, z }
+    }
 }
 
 /// A marker component for our shapes so we can query them separately from the ground plane
@@ -32,25 +48,27 @@ fn setup(
         ..default()
     });
 
-    let radiuses:Vec<f32> = vec![0.15,0.13,0.1, 0.065, 0.05, 0.03, 0.0];
-    for (idx, radius) in radiuses.iter().enumerate() {
-        let shape = MyBox::new(1.0, 2.0, 1.0, *radius);
+    let points: Vec<PointI32> = vec![PointI32::new(0, 1, 0), PointI32::new(1, 1, 0), PointI32::new(1, 2, 0), PointI32::new(0, 1, 1)];
+    let points_hash: HashMap<(i32, i32, i32), bool> = HashMap::new();
+    let box_unit = 1.0;
+    for point in points.iter()
+    {
+        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.05);
+        if points_hash.contains_key(&(point.x, point.y, point.z)) {}
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
                 material: materials.add(StandardMaterial {
-                    base_color: Color::rgb(0.8, 1.0, 0.8),
-                    metallic:0.5,
+                    base_color: Color::rgb(0.5 + 0.2 * point.x as f32, 0.5 + 0.1 * point.y as f32, 1. - (0.2 * point.z as f32)),
+                    metallic: 0.1,
                     ..default()
                 }),
-                transform: Transform::from_xyz((idx as f32 - (radiuses.len() as f32 / 2.)) * 2.0, 2.0, 0.0),
+                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit),
                 ..default()
             },
             Shape,
         ));
-
     }
-
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -71,33 +89,32 @@ fn setup(
     });
 
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 3., 15.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(0.0, 3., 10.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 }
 
 fn rotate(
-    mut query: Query<&mut Transform, With<Shape>>,
+    mut query: Query<&mut Transform, With<Camera3d>>,
     time: Res<Time>,
     keycode: Res<Input<KeyCode>>) {
-    let speed = 0.02;
+    let speed = time.delta().as_millis() as f32 / 1000.0;
     for mut transform in &mut query {
+        transform.look_at(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 0.));
         if keycode.pressed(KeyCode::Right) {
-            transform.rotate(Quat::from_rotation_y(speed));
+            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_y(speed));
         }
         if keycode.pressed(KeyCode::Left) {
-            transform.rotate(Quat::from_rotation_y(-speed));
+            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_y(-speed));
         }
         if keycode.pressed(KeyCode::Up) {
-            transform.rotate(Quat::from_rotation_x(-speed));
+            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_x(speed));
         }
         if keycode.pressed(KeyCode::Down) {
-            transform.rotate(Quat::from_rotation_x(speed));
+            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_x(-speed));
         }
     }
 }
-
-
 
 
 /// Creates a colorful test pattern
@@ -129,7 +146,7 @@ fn uv_debug_texture() -> Image {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct MyBox {
+pub struct SoftBox {
     pub min_x: f32,
     pub max_x: f32,
 
@@ -141,16 +158,16 @@ pub struct MyBox {
     pub edge_radius: f32,
 }
 
-impl Default for MyBox {
+impl Default for SoftBox {
     fn default() -> Self {
-        MyBox::new(3.0, 3.0, 3.0, 0.5)
+        SoftBox::new(3.0, 3.0, 3.0, 0.5)
     }
 }
 
-impl MyBox {
+impl SoftBox {
     /// Creates a new box centered at the origin with the supplied side lengths.
-    pub fn new(x_length: f32, y_length: f32, z_length: f32, edge_radius: f32) -> MyBox {
-        MyBox {
+    pub fn new(x_length: f32, y_length: f32, z_length: f32, edge_radius: f32) -> SoftBox {
+        SoftBox {
             max_x: x_length / 2.0,
             min_x: -x_length / 2.0,
             max_y: y_length / 2.0,
@@ -162,11 +179,9 @@ impl MyBox {
     }
 }
 
-impl From<MyBox> for Mesh {
-    fn from(sp: MyBox) -> Self {
+impl From<SoftBox> for Mesh {
+    fn from(sp: SoftBox) -> Self {
         let _r = sp.edge_radius;
-        // suppose Y-up right hand, and camera look from +z to -z
-
         let vertices = &[
             // Front
             ([sp.min_x + _r, sp.min_y + _r, sp.max_z], [0., 0., 1.0], [0., 0.]),    // 0 - bottom, left
