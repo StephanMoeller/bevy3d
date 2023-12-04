@@ -1,13 +1,13 @@
 //! This example demonstrates the built-in 3d shapes in Bevy.
 //! The scene includes a patterned texture and a rotation for visualizing the normals and UVs.
-
+use rand::prelude::*;
 use bevy::*;
 use bevy::{
     prelude::*,
     render::render_resource::*,
 };
+use bevy::prelude::shape::*;
 use bevy::render::mesh::Indices;
-use bevy::utils::HashMap;
 
 fn main() {
     App::new()
@@ -29,45 +29,28 @@ impl PointI32 {
     pub fn new(x: i32, y: i32, z: i32) -> PointI32 {
         PointI32 { x, y, z }
     }
-    pub fn get_neighbour(&self, x_rel: i32, y_rel: i32, z_rel: i32) -> PointI32
-    {
-        return PointI32::new(self.x + x_rel, self.y + y_rel, self.z + z_rel);
-    }
 }
 
 /// A marker component for our shapes so we can query them separately from the ground plane
 #[derive(Component)]
 struct Shape;
 
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let points: Vec<PointI32> = vec![PointI32::new(0, 1, 0),
-                                     PointI32::new(1, 1, 0),
-                                     PointI32::new(1, 2, 0),
-                                     PointI32::new(0, 1, 1)];
+fn setup(mut commands: Commands,
+         mut meshes: ResMut<Assets<Mesh>>,
+         mut materials: ResMut<Assets<StandardMaterial>>) {
 
-    let points_hash: HashMap<PointI32, bool> = HashMap::new();
-    let box_unit = 1.0;
+    let points = get_random_points(400);
+
+    let box_unit = 0.5;
     for point in points.iter()
     {
-        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.05);
-        if points_hash.contains_key(&point.get_neighbour(0,0,1))
-        {
-
-        }
+        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.10);
+        let color = get_color(&point);
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
-                material: materials.add(StandardMaterial {
-                    base_color: Color::rgb(0.5 + 0.2 * point.x as f32, 0.5 + 0.1 * point.y as f32, 1. - (0.2 * point.z as f32)),
-                    metallic: 0.1,
-                    ..default()
-                }),
-                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit),
-                ..default()
+                material: materials.add(StandardMaterial { base_color: color, metallic: 0.1, ..default() }),
+                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit), ..default()
             },
             Shape,
         ));
@@ -80,14 +63,14 @@ fn setup(
     });
 
     // ground plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Plane::from_size(50.0).into()),
-        material: materials.add(Color::SILVER.into()),
-        ..default()
-    });
-
+    /*    commands.spawn(PbrBundle {
+            mesh: meshes.add(shape::Plane::from_size(50.0).into()),
+            material: materials.add(Color::SILVER.into()),
+            ..default()
+        });
+    */
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 3., 10.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(0.0, 3., 20.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 }
@@ -189,6 +172,7 @@ impl From<SoftBox> for Mesh {
         let uvs: Vec<_> = vertices.iter().map(|(_, _, uv)| *uv).collect();
 
         let indices = Indices::U32(vec![
+            // faces
             0, 1, 2, 2, 3, 0, // front
             4, 5, 6, 6, 7, 4, // back
             8, 9, 10, 10, 11, 8, // right
@@ -196,8 +180,8 @@ impl From<SoftBox> for Mesh {
             16, 17, 18, 18, 19, 16, // top
             20, 21, 22, 22, 23, 20, // bottom
 
-            // borders
-            0, 3, 13, 13, 12, 0,    // front/left
+            // edges
+            0,   3, 13, 13, 12, 0,    // front/left
             18, 17, 13, 14, 13, 17, // top/left
             4, 7, 14, 14, 7, 15,    // back/left
             22, 21, 15, 12, 15, 21, // bottom/left
@@ -212,7 +196,7 @@ impl From<SoftBox> for Mesh {
             23, 22, 7, 7, 6, 23,    // bottom/back
             5, 4, 17, 17, 16, 5,    // back/top
 
-            // corners top
+            // corners
             18, 13, 3, // top/left/front
             17, 4, 14, // top/left/back
             19, 2, 10, // top/right/front
@@ -221,7 +205,7 @@ impl From<SoftBox> for Mesh {
             21, 0, 12, // bottom/left/front
             22, 15, 7, // bottom/left/back
             20, 11, 1, // bottom/right/front
-            23, 6, 8,   // bottom/right/back
+            23, 6, 8,  // bottom/right/back
         ]);
 
         Mesh::new(PrimitiveTopology::TriangleList)
@@ -230,4 +214,37 @@ impl From<SoftBox> for Mesh {
             .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
             .with_indices(Some(indices))
     }
+}
+
+fn get_random_points(point_count: usize) -> Vec<PointI32> {
+    let mut points: Vec<PointI32> = vec![];
+    points.push(PointI32::new(0, 5, 0));
+    while points.len() < point_count
+    {
+        let direction = get_random_direction();
+        let prev = points.last().unwrap();
+        let next = PointI32::new(prev.x + direction.x, prev.y + direction.y, prev.z + direction.z);
+        points.push(next);
+    }
+    return points;
+}
+
+fn get_random_direction() -> PointI32 {
+    let mut rng = rand::thread_rng();
+    let position: usize = rng.gen_range(0..6);
+    match position {
+        0 => PointI32::new(1, 0, 0),
+        1 => PointI32::new(-1, 0, 0),
+        2 => PointI32::new(0, 1, 0),
+        3 => PointI32::new(0, -1, 0),
+        4 => PointI32::new(0, 0, 1),
+        5 => PointI32::new(0, 0, -1),
+        _ => panic!("Should not be hit!")
+    }
+}
+
+
+
+fn get_color(point: &PointI32) -> Color {
+    return Color::rgb(0.5 + 0.2 * point.x as f32, 0.5 + 0.1 * point.y as f32, 1. - (0.2 * point.z as f32));
 }
