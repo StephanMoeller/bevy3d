@@ -38,39 +38,33 @@ struct Shape;
 fn setup(mut commands: Commands,
          mut meshes: ResMut<Assets<Mesh>>,
          mut materials: ResMut<Assets<StandardMaterial>>) {
-
-    let points = get_random_points(400);
+    let points = get_world_points();
 
     let box_unit = 0.5;
     for point in points.iter()
     {
-        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.10);
+        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.01);
+        //let shape = Cube::new(box_unit * 0.99);
         let color = get_color(&point);
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
-                material: materials.add(StandardMaterial { base_color: color, metallic: 0.1, ..default() }),
-                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit), ..default()
+                material: materials.add(StandardMaterial { base_color: color, reflectance: 0.3, ..default() }),
+                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit),
+                ..default()
             },
             Shape,
         ));
     }
 
     commands.spawn(PointLightBundle {
-        point_light: PointLight { intensity: 9000.0, range: 100., shadows_enabled: true, ..default() },
-        transform: Transform::from_xyz(8.0, 16.0, 8.0),
+        point_light: PointLight { intensity: 900.0, range: 100., shadows_enabled: true, shadow_depth_bias: 5.0, shadow_normal_bias: 5.0,  ..default() },
+        transform: Transform::from_xyz( 1.5 * box_unit, 0.5 * box_unit, 1.5 * box_unit),
         ..default()
     });
 
-    // ground plane
-    /*    commands.spawn(PbrBundle {
-            mesh: meshes.add(shape::Plane::from_size(50.0).into()),
-            material: materials.add(Color::SILVER.into()),
-            ..default()
-        });
-    */
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 3., 20.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(1.5 * box_unit, 0. * box_unit, 1.5 * box_unit).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 }
@@ -79,20 +73,34 @@ fn rotate(
     mut query: Query<&mut Transform, With<Camera3d>>,
     time: Res<Time>,
     keycode: Res<Input<KeyCode>>) {
-    let speed = time.delta().as_millis() as f32 / 1000.0;
+    let rotation_speed = time.delta().as_millis() as f32 / 400.0;
+    let move_speed = time.delta().as_millis() as f32 / 400.0;
     for mut transform in &mut query {
-        transform.look_at(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 0.));
-        if keycode.pressed(KeyCode::Right) {
-            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_y(speed));
+        if keycode.pressed(KeyCode::T) {
+            transform.translation.x += move_speed * transform.right().x;
+            transform.translation.y += move_speed * transform.right().y;
+            transform.translation.z += move_speed * transform.right().z;
         }
-        if keycode.pressed(KeyCode::Left) {
-            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_y(-speed));
+        if keycode.pressed(KeyCode::R) {
+            transform.translation.x += move_speed * transform.left().x;
+            transform.translation.y += move_speed * transform.left().y;
+            transform.translation.z += move_speed * transform.left().z;
         }
-        if keycode.pressed(KeyCode::Up) {
-            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_x(speed));
+        if keycode.pressed(KeyCode::I) {
+            transform.rotate_local_y(-rotation_speed);
         }
-        if keycode.pressed(KeyCode::Down) {
-            transform.rotate_around(Vec3::new(0., 0., 0.), Quat::from_rotation_x(-speed));
+        if keycode.pressed(KeyCode::N) {
+            transform.rotate_local_y(rotation_speed);
+        }
+        if keycode.pressed(KeyCode::U) || keycode.pressed(KeyCode::F)  {
+            transform.translation.x += move_speed * transform.forward().x;
+    transform.translation.y += move_speed * transform.forward().y;
+            transform.translation.z += move_speed * transform.forward().z;
+        }
+        if keycode.pressed(KeyCode::E) || keycode.pressed(KeyCode::S) {
+            transform.translation.x -= move_speed * transform.forward().x;
+            transform.translation.y -= move_speed * transform.forward().y;
+            transform.translation.z -= move_speed * transform.forward().z;
         }
     }
 }
@@ -181,7 +189,7 @@ impl From<SoftBox> for Mesh {
             20, 21, 22, 22, 23, 20, // bottom
 
             // edges
-            0,   3, 13, 13, 12, 0,    // front/left
+            0, 3, 13, 13, 12, 0,    // front/left
             18, 17, 13, 14, 13, 17, // top/left
             4, 7, 14, 14, 7, 15,    // back/left
             22, 21, 15, 12, 15, 21, // bottom/left
@@ -216,20 +224,38 @@ impl From<SoftBox> for Mesh {
     }
 }
 
-fn get_random_points(point_count: usize) -> Vec<PointI32> {
+fn get_world_points() -> Vec<PointI32> {
     let mut points: Vec<PointI32> = vec![];
-    points.push(PointI32::new(0, 5, 0));
-    while points.len() < point_count
+
+    let string_map = [
+        "XXXXXXXXXXXXXX",
+        "X  X         X",
+        "X            X",
+        "X  X         X",
+        "X          X X",
+        "X            X",
+        "XXXXXXXXXXXXXX"];
+    let mut z = 0;
+    for line in string_map
     {
-        let direction = get_random_direction();
-        let prev = points.last().unwrap();
-        let next = PointI32::new(prev.x + direction.x, prev.y + direction.y, prev.z + direction.z);
-        points.push(next);
+        let mut x = 0;
+        for char in line.chars()
+        {
+            x += 1;
+            if char == 'X'
+            {
+                points.push(PointI32::new(x,  0, z));
+            }
+
+            points.push(PointI32::new(x,  -1, z));
+        }
+        z += 1;
     }
+
     return points;
 }
 
-fn get_random_direction() -> PointI32 {
+fn _get_random_direction() -> PointI32 {
     let mut rng = rand::thread_rng();
     let position: usize = rng.gen_range(0..6);
     match position {
@@ -242,7 +268,6 @@ fn get_random_direction() -> PointI32 {
         _ => panic!("Should not be hit!")
     }
 }
-
 
 
 fn get_color(point: &PointI32) -> Color {
