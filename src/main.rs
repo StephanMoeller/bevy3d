@@ -6,15 +6,21 @@ use bevy::{
     prelude::*,
     render::render_resource::*,
 };
-use bevy::prelude::shape::*;
 use bevy::render::mesh::Indices;
-
+use rand::prelude::*;
 fn main() {
+    foo();
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup)
         .add_systems(Update, rotate)
         .run();
+}
+
+struct Player
+{
+    position: Vec3,
+    direction: Vec3
 }
 
 #[derive(Eq, Hash, PartialEq)]
@@ -35,22 +41,27 @@ impl PointI32 {
 #[derive(Component)]
 struct Shape;
 
+const BOX_UNIT: f32 = 10.0;
+fn foo() -> i32{
+    return foo();
+}
+
 fn setup(mut commands: Commands,
          mut meshes: ResMut<Assets<Mesh>>,
          mut materials: ResMut<Assets<StandardMaterial>>) {
     let points = get_world_points();
 
-    let box_unit = 0.5;
+    let mut rng: ThreadRng = rand::thread_rng();
     for point in points.iter()
     {
-        let shape = SoftBox::new(box_unit, box_unit, box_unit, 0.01);
-        //let shape = Cube::new(box_unit * 0.99);
-        let color = get_color(&point);
+        //let shape = SoftBox::new(BOX_UNIT, BOX_UNIT, BOX_UNIT, 0.02 * BOX_UNIT);
+        let shape = shape::Cube::new(BOX_UNIT * 0.99);
+        let color = get_color(&mut rng);
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(shape.into()),
-                material: materials.add(StandardMaterial { base_color: color, reflectance: 0.3, ..default() }),
-                transform: Transform::from_xyz(point.x as f32 * box_unit, point.y as f32 * box_unit, point.z as f32 * box_unit),
+                material: materials.add(StandardMaterial { base_color: color, reflectance: 0.1, perceptual_roughness: 1.0, ..default() }),
+                transform: Transform::from_xyz(point.x as f32 * BOX_UNIT , point.y as f32 * BOX_UNIT, point.z as f32 * BOX_UNIT ),
                 ..default()
             },
             Shape,
@@ -58,23 +69,37 @@ fn setup(mut commands: Commands,
     }
 
     commands.spawn(PointLightBundle {
-        point_light: PointLight { intensity: 900.0, range: 100., shadows_enabled: true, shadow_depth_bias: 5.0, shadow_normal_bias: 5.0,  ..default() },
-        transform: Transform::from_xyz( 1.5 * box_unit, 0.5 * box_unit, 1.5 * box_unit),
+        point_light: PointLight { intensity: 3000.0 * BOX_UNIT, range: 1000. * BOX_UNIT, shadows_enabled: true, shadow_depth_bias: 0.01,  ..default() },
+        transform: Transform::from_xyz(5.5 * BOX_UNIT, 3.5 * BOX_UNIT, 5.5 * BOX_UNIT),
         ..default()
     });
 
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(1.5 * box_unit, 0. * box_unit, 1.5 * box_unit).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(1.5 * BOX_UNIT, 0. * BOX_UNIT, 1.5 * BOX_UNIT).looking_at(Vec3::new(1., 0., 0.), Vec3::Y),
         ..default()
     });
+
+
+
+    //    commands.spawn(Player{position: Vec3::new(2.0,0.0,2.0), direction: Vec3::new(0.0, 0.0, 1.0)});
 }
 
+fn update_light(
+    mut query: Query<&mut PointLight>,
+    time: Res<Time>,
+)
+{
+    for mut light in &mut query {
+        let v = time.elapsed().as_millis();
+        light.intensity = (v as f32 / 100.0).cos() * 50.0 + 250.0;
+    }
+}
 fn rotate(
     mut query: Query<&mut Transform, With<Camera3d>>,
     time: Res<Time>,
     keycode: Res<Input<KeyCode>>) {
-    let rotation_speed = time.delta().as_millis() as f32 / 400.0;
-    let move_speed = time.delta().as_millis() as f32 / 400.0;
+    let rotation_speed = time.delta().as_millis() as f32 / BOX_UNIT / 20.0;
+    let move_speed = time.delta().as_millis() as f32 / BOX_UNIT / 3.0;
     for mut transform in &mut query {
         if keycode.pressed(KeyCode::T) {
             transform.translation.x += move_speed * transform.right().x;
@@ -92,9 +117,9 @@ fn rotate(
         if keycode.pressed(KeyCode::N) {
             transform.rotate_local_y(rotation_speed);
         }
-        if keycode.pressed(KeyCode::U) || keycode.pressed(KeyCode::F)  {
+        if keycode.pressed(KeyCode::U) || keycode.pressed(KeyCode::F) {
             transform.translation.x += move_speed * transform.forward().x;
-    transform.translation.y += move_speed * transform.forward().y;
+            transform.translation.y += move_speed * transform.forward().y;
             transform.translation.z += move_speed * transform.forward().z;
         }
         if keycode.pressed(KeyCode::E) || keycode.pressed(KeyCode::S) {
@@ -234,6 +259,11 @@ fn get_world_points() -> Vec<PointI32> {
         "X  X         X",
         "X          X X",
         "X            X",
+        "X            X",
+        "X            X",
+        "X            X",
+        "X            X",
+        "X            X",
         "XXXXXXXXXXXXXX"];
     let mut z = 0;
     for line in string_map
@@ -244,10 +274,15 @@ fn get_world_points() -> Vec<PointI32> {
             x += 1;
             if char == 'X'
             {
-                points.push(PointI32::new(x,  0, z));
+                points.push(PointI32::new(x, 0, z));
+                points.push(PointI32::new(x, 1, z));
+                points.push(PointI32::new(x, 2, z));
+                points.push(PointI32::new(x, 3, z));
+                points.push(PointI32::new(x, 4, z));
+                points.push(PointI32::new(x, 5, z));
             }
 
-            points.push(PointI32::new(x,  -1, z));
+            points.push(PointI32::new(x, -1, z));
         }
         z += 1;
     }
@@ -270,6 +305,10 @@ fn _get_random_direction() -> PointI32 {
 }
 
 
-fn get_color(point: &PointI32) -> Color {
-    return Color::rgb(0.5 + 0.2 * point.x as f32, 0.5 + 0.1 * point.y as f32, 1. - (0.2 * point.z as f32));
+fn get_color(rand: &mut ThreadRng) -> Color {
+    let red: f32 = rand.gen_range(0.6..0.8);
+    let green: f32 = rand.gen_range(0.5..0.7);
+    let blue: f32 = rand.gen_range(0.2..0.4);
+    return Color::rgb(red, green , green);
+    // return Color::rgb(0.5 + 0.2 * point.x as f32, 0.5 + 0.1 * point.y as f32, 1. - (0.2 * point.z as f32));
 }
