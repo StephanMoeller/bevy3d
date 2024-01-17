@@ -9,7 +9,6 @@ use bevy::{
 use bevy::render::mesh::Indices;
 use rand::prelude::*;
 fn main() {
-    foo();
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup)
@@ -42,9 +41,6 @@ impl PointI32 {
 struct Shape;
 
 const BOX_UNIT: f32 = 10.0;
-fn foo() -> i32{
-    return foo();
-}
 
 fn setup(mut commands: Commands,
          mut meshes: ResMut<Assets<Mesh>>,
@@ -101,28 +97,28 @@ fn rotate(
     let rotation_speed = time.delta().as_millis() as f32 / BOX_UNIT / 20.0;
     let move_speed = time.delta().as_millis() as f32 / BOX_UNIT / 3.0;
     for mut transform in &mut query {
-        if keycode.pressed(KeyCode::T) {
+        if keycode.pressed(KeyCode::End) {
             transform.translation.x += move_speed * transform.right().x;
             transform.translation.y += move_speed * transform.right().y;
             transform.translation.z += move_speed * transform.right().z;
         }
-        if keycode.pressed(KeyCode::R) {
+        if keycode.pressed(KeyCode::Home) {
             transform.translation.x += move_speed * transform.left().x;
             transform.translation.y += move_speed * transform.left().y;
             transform.translation.z += move_speed * transform.left().z;
         }
-        if keycode.pressed(KeyCode::I) {
+        if keycode.pressed(KeyCode::Right) {
             transform.rotate_local_y(-rotation_speed);
         }
-        if keycode.pressed(KeyCode::N) {
+        if keycode.pressed(KeyCode::Left) {
             transform.rotate_local_y(rotation_speed);
         }
-        if keycode.pressed(KeyCode::U) || keycode.pressed(KeyCode::F) {
+        if keycode.pressed(KeyCode::Up) {
             transform.translation.x += move_speed * transform.forward().x;
             transform.translation.y += move_speed * transform.forward().y;
             transform.translation.z += move_speed * transform.forward().z;
         }
-        if keycode.pressed(KeyCode::E) || keycode.pressed(KeyCode::S) {
+        if keycode.pressed(KeyCode::Down) {
             transform.translation.x -= move_speed * transform.forward().x;
             transform.translation.y -= move_speed * transform.forward().y;
             transform.translation.z -= move_speed * transform.forward().z;
